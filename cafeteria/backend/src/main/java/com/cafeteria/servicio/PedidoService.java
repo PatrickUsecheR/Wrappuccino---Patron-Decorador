@@ -2,7 +2,12 @@ package com.cafeteria.servicio;
 
 import com.cafeteria.dto.PedidoRequest;
 import com.cafeteria.dto.PedidoResponse;
-import com.cafeteria.modelo.*;
+import com.cafeteria.modelo.Bebida;
+import com.cafeteria.modelo.Tamano;
+import com.cafeteria.patterns.builder.BeverageBuilder;
+import com.cafeteria.patterns.factory.BeverageFactory;
+import com.cafeteria.patterns.factory.BeverageFactoryProvider;
+import com.cafeteria.patterns.prototype.BeverageRecipe;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -18,38 +23,46 @@ public class PedidoService {
             throw error("Falta la bebida base");
         }
 
-        // 1) Componente concreto
-        Bebida bebida = switch (req.base().toLowerCase(Locale.ROOT)) {
-            case "espresso" -> new Espresso();
-            case "te"       -> new Te();
-            default         -> throw error("Base desconocida: " + req.base());
-        };
-
-        // 2) Decoradores de extras (anidamiento dinámico)
+        BeverageRecipe recipe = BeverageRecipe.forBeverage(parseBeverageKind(req.base()));
         List<String> extras = req.extras() == null ? List.of() : req.extras();
         for (String extra : extras) {
+            if (extra == null || extra.isBlank()) {
+                throw error("Extra inválido");
+            }
+
             String[] partes = extra.split(":", 2);
             switch (partes[0].toLowerCase(Locale.ROOT)) {
-                case "shot"   -> bebida = new ExtraShot(bebida);
+                case "shot"   -> recipe.withExtraShot();
                 case "jarabe" -> {
                     if (partes.length < 2 || partes[1].isBlank()) throw error("Jarabe sin sabor");
-                    bebida = new ExtraJarabe(bebida, partes[1].trim());
+                    recipe.withSyrup(partes[1].trim());
                 }
                 default -> throw error("Extra desconocido: " + extra);
             }
         }
 
-        // 3) Tamaño siempre al final: multiplica el costo total acumulado
-        Tamano.Medida medida;
-        try {
-            medida = Tamano.Medida.valueOf(
-                    (req.tamano() == null ? "PEQUENO" : req.tamano()).toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            throw error("Tamaño desconocido: " + req.tamano());
-        }
-        bebida = new Tamano(bebida, medida);
+        recipe.withSize(parseSize(req.tamano()));
+        BeverageRecipe orderRecipe = recipe.copy();
+        BeverageFactory factory = BeverageFactoryProvider.forKind(orderRecipe.getBeverageKind());
+        Bebida bebida = new BeverageBuilder(factory).withRecipe(orderRecipe).build();
 
         return new PedidoResponse(bebida.getDescripcion(), bebida.getCosto());
+    }
+
+    private BeverageRecipe.BeverageKind parseBeverageKind(String base) {
+        return switch (base.toLowerCase(Locale.ROOT)) {
+            case "espresso" -> BeverageRecipe.BeverageKind.ESPRESSO;
+            case "te" -> BeverageRecipe.BeverageKind.TEA;
+            default -> throw error("Base desconocida: " + base);
+        };
+    }
+
+    private Tamano.Medida parseSize(String size) {
+        try {
+            return Tamano.Medida.valueOf((size == null ? "PEQUENO" : size).toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw error("Tamaño desconocido: " + size);
+        }
     }
 
     private ResponseStatusException error(String msg) {
