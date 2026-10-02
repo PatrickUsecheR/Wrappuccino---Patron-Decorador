@@ -1,13 +1,23 @@
-# Cafetería · Patrón Decorator (Spring Boot + Vercel)
+## Patrones de diseño
 
-- backend/  → Spring Boot 3 (Java 17), POST /api/pedido/preview
-- frontend/ → HTML + CSS + JS vanilla (nginx)
-- vercel.json → services + rewrites (Vercel Container Images, Beta)
+| Patrón | Dónde | Para qué sirve |
+|---|---|---|
+| **Decorator** | `modelo/` (`BebidaDecorator`, `ExtraShot`, `ExtraJarabe`, `Tamano`) | Agrega extras y tamaño a una bebida sin crear una subclase por cada combinación |
+| **Abstract Factory** | `fabrica/` (`BebidaFactory`, `CafeFactory`, `TeFactory`, `FabricaBebidas`) | Crea la familia de productos (base + extras) de cada línea de bebidas |
+| **Builder** | `constructor/` (`BebidaBuilder`) | Arma la bebida paso a paso y aplica siempre el tamaño al final |
+| **Prototype** | `prototipo/` (`CatalogoBebidas`, `Bebida.copiar()`) | Entrega copias profundas de bebidas predefinidas ("plantillas") |
 
-Local:
-  cd backend && mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8080
-  curl -X POST localhost:8080/api/pedido/preview -H "Content-Type: application/json" \
-    -d '{"base":"espresso","tamano":"GRANDE","extras":["SHOT","JARABE:vainilla"]}'
+### Ejemplo
+```java
+Bebida b = new BebidaBuilder(new CafeFactory())
+        .conShot()
+        .conJarabe("vainilla")
+        .tamano(Tamano.Medida.GRANDE)
+        .construir();
+// Espresso + Extra shot + Jarabe de vainilla (Grande) -> 4.88
 
-Deploy:
-  npm i -g vercel && vercel login && vercel --prod
+Bebida plantilla = new CatalogoBebidas().obtener("espresso-doble"); // copia nueva
+```
+
+### Flujo de un pedido
+`PedidoController` -> `PedidoService` -> `FabricaBebidas` (elige fábrica) -> `BebidaBuilder` (arma con decoradores) -> `PedidoResponse`
