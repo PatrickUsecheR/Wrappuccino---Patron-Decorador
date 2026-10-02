@@ -1,33 +1,13 @@
-# Wrappuccino
-Es un sistema de pedidos de cafetería con el patrón Decorator
-Implementa un sistema de pedidos de bebidas personalizables en Java
-que demuestra el patrón de diseño Decorator. Cada bebida puede
-ampliarse en tiempo de ejecución con extras combinables, y tanto la
-descripción como el costo se calculan dinámicamente envolviendo objetos
-en lugar de usar herencia.
+# Cafetería · Patrón Decorator (Spring Boot + Vercel)
 
-Estructura del patrón Decorator:
-- Beverage (interfaz): componente con getDescription() y getCost()
-- Espresso, Tea: componentes concretos (bebidas base)
-- BeverageDecorator (abstracta): envuelve un Beverage e implementa la
-  misma interfaz, delegando en el objeto envuelto
-- Size (Medium/Large), Milk (Whole/Oat/Almond), Syrup (Vanilla/Caramel/
-  Hazelnut), ExtraShot: decoradores concretos que agregan su propio
-  texto a la descripción y su propio precio al total
+- backend/  → Spring Boot 3 (Java 17), POST /api/pedido/preview
+- frontend/ → HTML + CSS + JS vanilla (nginx)
+- vercel.json → services + rewrites (Vercel Container Images, Beta)
 
-# Modelo de pedido:
-- Order guarda las bebidas confirmadas, permite agregar, quitar y vaciar,
-  y calcula el total del pedido
+Local:
+  cd backend && mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8080
+  curl -X POST localhost:8080/api/pedido/preview -H "Content-Type: application/json" \
+    -d '{"base":"espresso","tamano":"GRANDE","extras":["SHOT","JARABE:vainilla"]}'
 
-Interfaz Swing (MenuFrame):
-- Menú interactivo para elegir bebida base, tamaño y extras
-- Vista previa en vivo: la descripción y el precio se actualizan con
-  cada cambio
-- Vista de capas que muestra cada decorador anidado alrededor de la
-  bebida base, con opción de quitar cualquier capa
-- Panel de pedido con acciones para agregar, quitar, vaciar y confirmar
-- Los extras se pueden apilar (por ejemplo, dos jarabes de vainilla más
-  un shot extra)
-
-
- README.md hecho por Nicoll Lopez 
+Deploy:
+  npm i -g vercel && vercel login && vercel --prod
